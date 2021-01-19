@@ -14,9 +14,9 @@ from pyfirmata2 import Arduino, util
 import concurrent.futures
 import threading#
 
-from mmcore_pymmcore import MMCore
-from multid_widget import MultiDWidget
-from optocamp_widget import OptocampWidget 
+from micromanager_gui.mmcore_pymmcore import MMCore
+# from multid_widget import MultiDWidget
+# from optocamp_widget import OptocampWidget 
 
 #dir_path = Path(__file__).parent
 icon_path = Path(__file__).parent/'icons'
@@ -117,12 +117,15 @@ class MainWindow(QtW.QMainWindow):
         
     def __init__(self, viewer):
         super().__init__()
-
         self.viewer = viewer
         self.worker = None
 
         uic.loadUi(UI_FILE, self)#load QtDesigner .ui file
 
+        self.multid_tab.viewer = viewer
+        # self.multid_tab.main_window = self
+        self.optocamp_tab.viewer = viewer
+        
         self.cfg_LineEdit.setText(DEFAULT_CFG_NAME)#fill cfg line with DEFAULT_CFG_NAME ('demo.cfg')
 
         #connect buttons

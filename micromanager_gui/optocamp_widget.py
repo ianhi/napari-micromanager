@@ -12,9 +12,10 @@ from skimage import io
 
 from pyfirmata2 import Arduino, util
 import concurrent.futures
-import threading#
+import threading
 
-from mmcore_pymmcore import MMCore
+
+from .mmcore_pymmcore import MMCore
 
 import napari
 
@@ -272,8 +273,8 @@ class OptocampWidget(QtW.QWidget):
 
                 #######
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    t1 = executor.submit(self.snap_optocamp, int(self.exp_spinBox_1.value()),i)
-                    t2 = executor.submit(self.led_on, float(start_led_power/100), (int(self.exp_spinBox_1.value())/1000))
+                    executor.submit(self.snap_optocamp, int(self.exp_spinBox_1.value()),i)
+                    executor.submit(self.led_on, float(start_led_power/100), (int(self.exp_spinBox_1.value())/1000))
                 #######
 
                 finish = time.perf_counter()

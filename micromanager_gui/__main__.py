@@ -2,6 +2,7 @@ import sys
 from qtpy.QtWidgets import QApplication
 import napari
 
+
 from main_window import MainWindow
 
 with napari.gui_qt():
@@ -16,6 +17,5 @@ with napari.gui_qt():
     screen_width = V.width()
     viewer.window._qt_window.setGeometry(0, 0, screen_width, screen_height)
     viewer.window.window_menu
-
 
 

@@ -13,7 +13,7 @@ from textwrap import dedent
 from skimage import io
 import concurrent.futures
 
-from mmcore_pymmcore import MMCore
+from .mmcore_pymmcore import MMCore
 
 
 icon_path = Path(__file__).parent/'icons'
@@ -224,6 +224,9 @@ class MultiDWidget(QtW.QWidget):
     
 
     def run_multi_d_acq_tpzcxy(self):
+        print(self.viewer)
+        import sys
+        sys.exit()
         dev_loaded = list(mmcore.getLoadedDevices())
         if len(dev_loaded) > 1:
             
@@ -278,9 +281,11 @@ class MultiDWidget(QtW.QWidget):
                 self.pos_stack_list.clear()
                 self.acq_stack_list.clear()
                 nC = self.channel_tableWidget.rowCount()
-                for _ in range(len(self.pos_list)): 
-                    # pos_stack = self.create_stack_array(timepoints, n_steps, nC) 
-                    pos_stack = self.create_stack_array(1, n_steps, nC) 
+                for _ in range(len(self.pos_list)):
+                    print("self.create_stack_array(timepoints, n_steps, nC) ", timepoints, n_steps, nC)
+                    pos_stack = self.create_stack_array(timepoints, n_steps, nC) 
+                    # pos_stack = self.create_stack_array(1, n_steps, nC)
+                    print("appending a stack with shape", pos_stack.shape)
                     self.pos_stack_list.append(pos_stack)
 
                 #create main save folder in directory
@@ -334,7 +339,8 @@ class MultiDWidget(QtW.QWidget):
                                 mmcore.snapImage()
                                 #put image in a stack
                                 stack = self.pos_stack_list[position]
-                                stack[:,z_position,c,:,:] = mmcore.getImage()
+                                # import ipdb; ipdb.set_trace()
+                                stack[t,z_position,c,:,:] = mmcore.getImage()
                                 
                                 end_snap = time.perf_counter()
                                 print(f'            channel snap took: {round(end_snap-start_snap, 4)} seconds')
@@ -346,14 +352,14 @@ class MultiDWidget(QtW.QWidget):
 
                         #save stack per position (n of file = n of timepoints)
                         #maybe use it to save temp files and remove them in the end
-                        if self.save_groupBox.isChecked():
-                            print('\n_______SAVING_______')
-                            position_format = format(position, '04d')
-                            t_format = format(t, '04d')
-                            z_position_format = format(z_position, '04d')
-                            save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
-                            pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
-                            io.imsave(str(pth), stack, imagej=True, check_contrast=False)
+                    if self.save_groupBox.isChecked():
+                        print('\n_______SAVING_______')
+                        position_format = format(position, '04d')
+                        t_format = format(t, '04d')
+                        z_position_format = format(z_position, '04d')
+                        save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
+                        pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
+                        io.imsave(str(pth), stack, imagej=True, check_contrast=False)
 
                     if timeinterval_unit > 0 and t < timepoints - 1:
                         print(f"\nIt was t_point: {t}")
@@ -366,27 +372,27 @@ class MultiDWidget(QtW.QWidget):
                     else:
                         mmcore.sleep(0.01)
 
-                #make hyperstack
-                t_stack = []
-                iterator = 0
-                for pos in range(len(self.pos_list)):
-                    for _ in range(timepoints):
-                        ts = self.acq_stack_list[iterator]
-                        t_stack.append(ts)
-                        iterator = iterator + len(self.pos_list)
+                # #make hyperstack
+                # t_stack = []
+                # iterator = 0
+                # for pos in range(len(self.pos_list)):
+                #     for _ in range(timepoints):
+                #         ts = self.acq_stack_list[iterator]
+                #         t_stack.append(ts)
+                #         iterator = iterator + len(self.pos_list)
 
-                    stack_t = np.concatenate(t_stack, axis=0)
+                #     stack_t = np.concatenate(t_stack, axis=0)
 
-                    if self.save_groupBox.isChecked():
-                        pos_format = format(pos, '04d')
-                        t_format = format(timepoints, '04d')
-                        z_position_format = format(n_steps, '04d')
-                        save_name = f'{self.fname_lineEdit.text()}_p{pos_format}_ts{t_format}_zs{z_position_format}_{self.list_ch}'
-                        pth = save_folder / f'Pos_{pos_format}' / f'{save_name}.tif'
-                        io.imsave(str(pth), stack_t, imagej=True, check_contrast=False)
+                #     if self.save_groupBox.isChecked():
+                #         pos_format = format(pos, '04d')
+                #         t_format = format(timepoints, '04d')
+                #         z_position_format = format(n_steps, '04d')
+                #         save_name = f'{self.fname_lineEdit.text()}_p{pos_format}_ts{t_format}_zs{z_position_format}_{self.list_ch}'
+                #         pth = save_folder / f'Pos_{pos_format}' / f'{save_name}.tif'
+                #         io.imsave(str(pth), stack_t, imagej=True, check_contrast=False)
 
-                    t_stack.clear()
-                    iterator = pos + 1
+                #     t_stack.clear()
+                #     iterator = pos + 1
                 
 
                 end_acq_timr = time.perf_counter()
