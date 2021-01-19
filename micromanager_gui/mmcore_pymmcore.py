@@ -31,6 +31,26 @@ class MMCore:
         return cls._instance
 
 
+
+
+
+
+
+
+
+
+
+
+
+def _some_function():
+    # when teh stage
+
+
+self.mm = MMCore()
+self.mm.xy_stage_position_changed.connect(_some_function)
+
+
+
 # class MMCore(QObject):
 #     properties_changed = Signal()
 #     property_changed = Signal(str, str, object)
@@ -114,3 +134,4 @@ class MMCore:
 
 #     def onSLMExposureChanged(self, name: str, new_exposure: float):
 #         self._emitter.slm_exposure_changed.emit(name, new_exposure)
+        
