@@ -207,9 +207,6 @@ class MultiDWidget(QtW.QWidget):
                 executor.submit(self.run_multi_d_acq_tpzcxy())
         #elif:
 
-    def update_viewer(self):
-        pass
-
     def mda_summary_string(self):
         pass
 
@@ -221,12 +218,15 @@ class MultiDWidget(QtW.QWidget):
         dt = f'uint{bitd}'
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
-    
+
+    def update_viewer_mda(self, layer, layer_name):
+        try:
+            self.viewer.layers[layer_name].data = layer
+        except KeyError:
+            self.viewer.add_image(layer, name=layer_name)
+
 
     def run_multi_d_acq_tpzcxy(self):
-        print(self.viewer)
-        import sys
-        sys.exit()
         dev_loaded = list(mmcore.getLoadedDevices())
         if len(dev_loaded) > 1:
             
@@ -281,12 +281,18 @@ class MultiDWidget(QtW.QWidget):
                 self.pos_stack_list.clear()
                 self.acq_stack_list.clear()
                 nC = self.channel_tableWidget.rowCount()
+                
                 for _ in range(len(self.pos_list)):
                     print("self.create_stack_array(timepoints, n_steps, nC) ", timepoints, n_steps, nC)
                     pos_stack = self.create_stack_array(timepoints, n_steps, nC) 
                     # pos_stack = self.create_stack_array(1, n_steps, nC)
                     print("appending a stack with shape", pos_stack.shape)
                     self.pos_stack_list.append(pos_stack)
+
+                # print("adding to viewer empty stack with shape", pos_stack.shape)
+                # layer = pos_stack
+                # self.viewer.add_image(layer, name="MDA")
+                
 
                 #create main save folder in directory
                 if self.save_groupBox.isChecked():
@@ -341,7 +347,20 @@ class MultiDWidget(QtW.QWidget):
                                 stack = self.pos_stack_list[position]
                                 # import ipdb; ipdb.set_trace()
                                 stack[t,z_position,c,:,:] = mmcore.getImage()
+
+                                # def snap_mda(self, exp):
+                                #     mmcore.setExposure(exp)
+
+
+                                layer = stack
+                                layer_name = f'Position_{position}'
+
+                                with concurrent.futures.ThreadPoolExecutor() as executor:
+                                    executor.submit(self.update_viewer_mda(layer, layer_name))
                                 
+                                
+                                                        
+
                                 end_snap = time.perf_counter()
                                 print(f'            channel snap took: {round(end_snap-start_snap, 4)} seconds')
 

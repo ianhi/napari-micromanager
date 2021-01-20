@@ -124,7 +124,7 @@ class MainWindow(QtW.QMainWindow):
 
         self.multid_tab.viewer = viewer
         # self.multid_tab.main_window = self
-        self.optocamp_tab.viewer = viewer
+        # self.optocamp_tab.viewer = viewer
         
         self.cfg_LineEdit.setText(DEFAULT_CFG_NAME)#fill cfg line with DEFAULT_CFG_NAME ('demo.cfg')
 
@@ -175,6 +175,10 @@ class MainWindow(QtW.QMainWindow):
         self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
         self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
         self.bin_comboBox.currentIndexChanged.connect(self.bin_changed)
+
+        #connect callback
+        mmcore.xy_stage_position_changed.connect(self.update_stage_position)
+        mmcore.stage_position_changed.connect(self.update_stage_position)
 
     def get_devices_and_props(self):
         ##List devices and properties that you can set
@@ -294,6 +298,7 @@ class MainWindow(QtW.QMainWindow):
         self.x_lineEdit.setText(str('%.0f'%x))
         self.y_lineEdit.setText(str('%.0f'%y))
         self.z_lineEdit.setText(str('%.1f'%z))
+        print(f'\nStage moved to x:{x} y:{y} z:{z}')
 
     def stage_x_left(self):
         xpos = mmcore.getXPosition()
