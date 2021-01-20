@@ -219,11 +219,17 @@ class MultiDWidget(QtW.QWidget):
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
 
-    def update_viewer_mda(self, layer, layer_name):
+    def snap_mda(self, pos_stack_list, position, t, z_position, c):
+        mmcore.snapImage()
+        stack = self.pos_stack_list[position]
+        stack[t,z_position,c,:,:] = mmcore.getImage()
+        return stack
+
+    def update_viewer_mda(self, stack, layer_name):
         try:
-            self.viewer.layers[layer_name].data = layer
+            self.viewer.layers[layer_name].data = stack
         except KeyError:
-            self.viewer.add_image(layer, name=layer_name)
+            self.viewer.add_image(stack, name=layer_name)
 
 
     def run_multi_d_acq_tpzcxy(self):
@@ -342,21 +348,24 @@ class MultiDWidget(QtW.QWidget):
                                 mmcore.setExposure(exp)
                                 mmcore.setConfig("Channel", ch)
                                 # mmcore.waitForDevice('')
-                                mmcore.snapImage()
-                                #put image in a stack
-                                stack = self.pos_stack_list[position]
-                                # import ipdb; ipdb.set_trace()
-                                stack[t,z_position,c,:,:] = mmcore.getImage()
 
-                                # def snap_mda(self, exp):
-                                #     mmcore.setExposure(exp)
-
-
-                                layer = stack
+                               
                                 layer_name = f'Position_{position}'
 
                                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                                    executor.submit(self.update_viewer_mda(layer, layer_name))
+                                    stack = executor.submit(self.snap_mda(self.pos_stack_list, position, t, z_position, c))
+                                    executor.submit(self.update_viewer_mda(stack, layer_name))
+
+                                #put image in a stack
+                                # stack = self.pos_stack_list[position]
+                                # stack[t,z_position,c,:,:] = mmcore.getImage()
+
+                                
+                                    
+
+
+
+                                
                                 
                                 
                                                         
