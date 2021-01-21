@@ -13,7 +13,10 @@ from textwrap import dedent
 from skimage import io
 import concurrent.futures
 
-from .mmcore_pymmcore import MMCore
+from napari.qt import thread_worker
+
+# from .mmcore_pymmcore import MMCore
+from mmcore_pymmcore import MMCore
 
 
 icon_path = Path(__file__).parent/'icons'
@@ -109,6 +112,7 @@ class MultiDWidget(QtW.QWidget):
     #add, remove, clear channel table
     def add_channel(self):
         dev_loaded = list(mmcore.getLoadedDevices())
+        print(dev_loaded)
         if len(dev_loaded) > 1:
 
             idx = self.channel_tableWidget.rowCount()
@@ -291,7 +295,6 @@ class MultiDWidget(QtW.QWidget):
                 # print("adding to viewer empty stack with shape", pos_stack.shape)
                 # layer = pos_stack
                 # self.viewer.add_image(layer, name="MDA")
-                
 
                 #create main save folder in directory
                 if self.save_groupBox.isChecked():
@@ -338,6 +341,7 @@ class MultiDWidget(QtW.QWidget):
                                 print(f'            Channel: {ch}, exp time: {exp}')
 
                                 start_snap = time.perf_counter()
+
                                 mmcore.setExposure(exp)
                                 mmcore.setConfig("Channel", ch)
                                 # mmcore.waitForDevice('')
@@ -348,9 +352,7 @@ class MultiDWidget(QtW.QWidget):
                                 stack[t,z_position,c,:,:] = mmcore.getImage()
 
                                 layer_name = f'Position_{position}'
-
-                                with concurrent.futures.ThreadPoolExecutor() as executor:
-                                    executor.submit(self.update_viewer_mda(stack, layer_name))                                                       
+                                self.update_viewer_mda(stack, layer_name)                                                     
 
                                 end_snap = time.perf_counter()
                                 print(f'            channel snap took: {round(end_snap-start_snap, 4)} seconds')
@@ -362,14 +364,15 @@ class MultiDWidget(QtW.QWidget):
 
                         #save stack per position (n of file = n of timepoints)
                         #maybe use it to save temp files and remove them in the end
-                    if self.save_groupBox.isChecked():
-                        print('\n_______SAVING_______')
-                        position_format = format(position, '04d')
-                        t_format = format(timepoints, '04d')
-                        z_position_format = format(z_position, '04d')
-                        save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
-                        pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
-                        io.imsave(str(pth), stack, imagej=True, check_contrast=False)
+                        if self.save_groupBox.isChecked():
+                            print('\n_______SAVING_______')
+                            position_format = format(position, '04d')
+                            position_format_1 = format(len(self.pos_list), '04d')
+                            t_format = format(timepoints, '04d')
+                            z_position_format = format(z_position, '04d')
+                            save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format_1}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
+                            pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
+                            io.imsave(str(pth), stack, imagej=True, check_contrast=False)
 
                     if timeinterval_unit > 0 and t < timepoints - 1:
                         print(f"\nIt was t_point: {t}")
@@ -379,8 +382,8 @@ class MultiDWidget(QtW.QWidget):
                         # while True:
                         #   display the time changing
                         mmcore.sleep(timeinterval_unit)
-                    else:
-                        mmcore.sleep(0.01)
+                    # else:
+                    #     mmcore.sleep(0.01)
 
                 # #make hyperstack
                 # t_stack = []
@@ -420,19 +423,12 @@ class MultiDWidget(QtW.QWidget):
         else:
             print('Load a cfg file first.')
 
-
-
-
-
-
-
-
-
-
     
 
+        
 
-    
+
+        
 
 
 

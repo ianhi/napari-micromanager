@@ -14,8 +14,8 @@ from pyfirmata2 import Arduino, util
 import concurrent.futures
 import threading
 
-
-from .mmcore_pymmcore import MMCore
+# from .mmcore_pymmcore import MMCore
+from mmcore_pymmcore import MMCore
 
 import napari
 

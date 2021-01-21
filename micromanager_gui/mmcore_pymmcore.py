@@ -9,27 +9,14 @@ from qtpy.QtCore import QObject, Signal
 def find_micromanager():
     if sys.platform == "darwin":
         mm_path = str(next(Path("/Applications/").glob("Micro-Manager*")))
-        print(f'Micromanager path: {mm_path}')
         return mm_path
 
     if sys.platform == "windows":
         Tk().withdraw()
         mm_path = askdirectory(title='Select Micro-Manager directory folder.') # shows dialog box
-        print(f'Micromanager path: {mm_path}')
         return mm_path
         
     raise RuntimeError(f"Not configured for OS: {sys.platform}")
-
-
-# class MMCore:
-#     _instance = None
-#     # Singleton pattern: https://python-patterns.guide/gang-of-four/singleton/
-#     def __new__(cls, *args, **kwargs):
-#         if cls._instance is None:
-#             cls._instance = pymmcore.CMMCore(*args, **kwargs)# = to: mmcore = pymmcore.CMMCore()
-#             cls._instance.setDeviceAdapterSearchPaths([find_micromanager()])# = to: mmcore.setDeviceAdapterSearchPaths([])
-#         return cls._instance
-
 
 
 class MMCore(QObject):
@@ -61,6 +48,7 @@ class MMCore(QObject):
         self._mmc = pymmcore.CMMCore()
         if not adapter_paths:
             adapter_paths = [find_micromanager()]
+            print(f'Micromanager path: {adapter_paths}')
         self._mmc.setDeviceAdapterSearchPaths(adapter_paths)
         self._callback = CallbackRelay(self)
         self._mmc.registerCallback(self._callback)

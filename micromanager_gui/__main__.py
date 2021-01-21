@@ -2,7 +2,6 @@ import sys
 from qtpy.QtWidgets import QApplication
 import napari
 
-
 from main_window import MainWindow
 
 with napari.gui_qt():
