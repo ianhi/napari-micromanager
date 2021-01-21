@@ -219,18 +219,11 @@ class MultiDWidget(QtW.QWidget):
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
 
-    def snap_mda(self, pos_stack_list, position, t, z_position, c):
-        mmcore.snapImage()
-        stack = self.pos_stack_list[position]
-        stack[t,z_position,c,:,:] = mmcore.getImage()
-        return stack
-
     def update_viewer_mda(self, stack, layer_name):
         try:
             self.viewer.layers[layer_name].data = stack
         except KeyError:
             self.viewer.add_image(stack, name=layer_name)
-
 
     def run_multi_d_acq_tpzcxy(self):
         dev_loaded = list(mmcore.getLoadedDevices())
@@ -349,26 +342,15 @@ class MultiDWidget(QtW.QWidget):
                                 mmcore.setConfig("Channel", ch)
                                 # mmcore.waitForDevice('')
 
-                               
+                                mmcore.snapImage()
+
+                                stack = self.pos_stack_list[position]
+                                stack[t,z_position,c,:,:] = mmcore.getImage()
+
                                 layer_name = f'Position_{position}'
 
                                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                                    stack = executor.submit(self.snap_mda(self.pos_stack_list, position, t, z_position, c))
-                                    executor.submit(self.update_viewer_mda(stack, layer_name))
-
-                                #put image in a stack
-                                # stack = self.pos_stack_list[position]
-                                # stack[t,z_position,c,:,:] = mmcore.getImage()
-
-                                
-                                    
-
-
-
-                                
-                                
-                                
-                                                        
+                                    executor.submit(self.update_viewer_mda(stack, layer_name))                                                       
 
                                 end_snap = time.perf_counter()
                                 print(f'            channel snap took: {round(end_snap-start_snap, 4)} seconds')
@@ -383,7 +365,7 @@ class MultiDWidget(QtW.QWidget):
                     if self.save_groupBox.isChecked():
                         print('\n_______SAVING_______')
                         position_format = format(position, '04d')
-                        t_format = format(t, '04d')
+                        t_format = format(timepoints, '04d')
                         z_position_format = format(z_position, '04d')
                         save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
                         pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
