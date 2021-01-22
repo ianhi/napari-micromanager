@@ -205,14 +205,6 @@ class MultiDWidget(QtW.QWidget):
         self.dir_lineEdit.setText(self.save_dir)
         self.parent_path = Path(self.save_dir)
 
-    def acquisition_order(self):
-        if self.acquisition_order_comboBox.currentText()=='tpzcyx':
-            self.capture_multid()
-        #elif:
-
-    def mda_summary_string(self):
-        pass
-
     #create stack array
     def create_stack_array(self, tp, Zp, nC):
         width = mmcore.getROI(mmcore.getCameraDevice())[2]#maybe they are inverted
@@ -221,6 +213,14 @@ class MultiDWidget(QtW.QWidget):
         dt = f'uint{bitd}'
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
+
+    def acquisition_order(self):
+        if self.acquisition_order_comboBox.currentText()=='tpzcyx':
+            self.capture_multid()
+        #elif:
+
+    def mda_summary_string(self):
+        pass
 
     #update viewer
     def update_viewer_mda(self, result):
@@ -358,19 +358,6 @@ class MultiDWidget(QtW.QWidget):
 
                             Bottom_z = Bottom_z + stepsize 
 
-                        #save stack per position (n of file = n of timepoints)
-                        #maybe use it to save temp files and remove them in the end
-                        # if self.save_groupBox.isChecked():
-                        #     print('\n_______SAVING TEMP_______')
-                        #     position_format = format(position, '04d')
-                        #     position_format_1 = format(len(self.pos_list), '04d')
-                        #     t_format = format(timepoints, '04d')
-                        #     z_position_format = format(z_position, '04d')
-                        #     save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format_1}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
-                        #     pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
-                        #     io.imsave(str(pth), stack, imagej=True, check_contrast=False)
-
-
                     if self.save_groupBox.isChecked():
                         for i in range(len(self.pos_stack_list)):
 
@@ -405,7 +392,11 @@ class MultiDWidget(QtW.QWidget):
                 """.format(round(end_acq_timr-start_acq_timr, 4))
                 summary = dedent(summary)
                 print(summary)
+
+                # worker.quit()
         
+
+        # worker = run_multi_d_acq_tpzcyx()
         run_multi_d_acq_tpzcyx()
     
 

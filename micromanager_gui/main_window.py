@@ -174,8 +174,8 @@ class MainWindow(QtW.QMainWindow):
         self.bin_comboBox.currentIndexChanged.connect(self.bin_changed)
 
         #connect callback
-        mmcore.xy_stage_position_changed.connect(self.update_stage_position)
-        mmcore.stage_position_changed.connect(self.update_stage_position)
+        mmcore.xy_stage_position_changed.connect(self.update_stage_position_xy)
+        mmcore.stage_position_changed.connect(self.update_stage_position_z)
 
     def get_devices_and_props(self):
         ##List devices and properties that you can set
@@ -271,7 +271,8 @@ class MainWindow(QtW.QMainWindow):
         else:
             print("Could not find 'Channel' in the ConfigGroups")
 
-        self.update_stage_position()
+        self.update_stage_position_xy()
+        self.update_stage_position_z()
 
         self.max_val_lineEdit.setText("None")
         self.min_val_lineEdit.setText("None")
@@ -288,14 +289,23 @@ class MainWindow(QtW.QMainWindow):
             mmcore.setProperty(self.cam_device, "Binning", self.bin_comboBox.currentText())
             print(f'Binning: {mmcore.getProperty(mmcore.getCameraDevice(), "Binning")}')   
 
-    def update_stage_position(self):
+    def update_stage_position_xy(self):
         x = int(mmcore.getXPosition())
         y = int(mmcore.getYPosition())
         z = int(mmcore.getPosition("Z_Stage"))
         self.x_lineEdit.setText(str('%.0f'%x))
         self.y_lineEdit.setText(str('%.0f'%y))
         self.z_lineEdit.setText(str('%.1f'%z))
-        print(f'Stage moved to x:{x} y:{y} z:{z}')
+        print(f'XY Stage moved to x:{x} y:{y} (z:{z})')
+
+    def update_stage_position_z(self):
+        x = int(mmcore.getXPosition())
+        y = int(mmcore.getYPosition())
+        z = int(mmcore.getPosition("Z_Stage"))
+        self.x_lineEdit.setText(str('%.0f'%x))
+        self.y_lineEdit.setText(str('%.0f'%y))
+        self.z_lineEdit.setText(str('%.1f'%z))
+        print(f'Z Stage moved to z:{z} (x:{x} y:{y})')
 
     def stage_x_left(self):
         xpos = mmcore.getXPosition()
@@ -351,7 +361,7 @@ class MainWindow(QtW.QMainWindow):
 
     def change_objective(self):
         if self.objective_comboBox.count() > 0:
-            print('changeing objective...')
+            print('\nchanging objective...')
             currentZ = mmcore.getPosition("Z_Stage")
             print(f"currentZ: {currentZ}")
             mmcore.setPosition("Z_Stage", 0)#set low z position
@@ -363,8 +373,7 @@ class MainWindow(QtW.QMainWindow):
             mmcore.setPosition("Z_Stage", currentZ)
             mmcore.waitForDevice("Z_Stage")
             print(f"upagain: {mmcore.getPosition('Z_Stage')}")
-            print(f"OBJECTIVE: {mmcore.getProperty('Objective', 'Label')}")
-            self.update_stage_position()
+            print(f"OBJECTIVE: {mmcore.getProperty('Objective', 'Label')}\n")
 
     def update_viewer(self, data):
         try:
