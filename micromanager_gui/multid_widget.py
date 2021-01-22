@@ -195,7 +195,7 @@ class MultiDWidget(QtW.QWidget):
         # print(f'z: {z_val}')
         mmcore.setXYPosition(float(x_val),float(y_val))
         mmcore.setPosition("Z_Stage", float(z_val)) 
-        print(f'\nStage moved to x:{x_val} y:{y_val} z:{z_val}')
+        print(f'Stage moved to x:{x_val} y:{y_val} z:{z_val}')
     
     def set_multi_d_acq_dir(self):
         #set the directory
@@ -206,9 +206,8 @@ class MultiDWidget(QtW.QWidget):
         self.parent_path = Path(self.save_dir)
 
     def acquisition_order(self):
-        if self.acquisition_order_comboBox.currentText()=='tpzcxy':
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                executor.submit(self.run_multi_d_acq_tpzcxy())
+        if self.acquisition_order_comboBox.currentText()=='tpzcyx':
+            self.capture_multid()
         #elif:
 
     def mda_summary_string(self):
@@ -223,96 +222,90 @@ class MultiDWidget(QtW.QWidget):
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
 
-    def update_viewer_mda(self, stack, layer_name):
+    def update_viewer_mda(self, result):
+        stack, layer_name = result
         try:
             self.viewer.layers[layer_name].data = stack
         except KeyError:
             self.viewer.add_image(stack, name=layer_name)
 
-    def run_multi_d_acq_tpzcxy(self):
-        dev_loaded = list(mmcore.getLoadedDevices())
-        if len(dev_loaded) > 1:
+
+    def capture_multid(self):
             
-            if self.channel_groupBox.isChecked() and self.channel_tableWidget.rowCount()>0:#can be removed
-                
-                self.list_ch.clear()
-                for c in range(self.channel_tableWidget.rowCount()):
-                    cnl = self.channel_tableWidget.cellWidget(c, 0).currentText()
-                    self.list_ch.append(cnl)
+        self.list_ch.clear()
+        for c in range(self.channel_tableWidget.rowCount()):
+            cnl = self.channel_tableWidget.cellWidget(c, 0).currentText()
+            self.list_ch.append(cnl)
 
-                #timelapse settings
-                if self.time_groupBox.isChecked():
-                    timepoints = self.timepoints_spinBox.value()
-                    timeinterval = self.interval_spinBox.value()
-                    unit = self.time_comboBox.currentText() #min, sec, ms
-                    if unit == 'min':
-                        timeinterval_unit = timeinterval*60000
-                    if unit == 'sec':
-                        timeinterval_unit = timeinterval*1000
-                    if unit == 'ms':
-                        timeinterval_unit = timeinterval
-                else:
-                    timepoints = 1
-                    timeinterval_unit = 0
+        #timelapse settings
+        if self.time_groupBox.isChecked():
+            timepoints = self.timepoints_spinBox.value()
+            timeinterval = self.interval_spinBox.value()
+            unit = self.time_comboBox.currentText() #min, sec, ms
+            if unit == 'min':
+                timeinterval_unit = timeinterval*60000
+            if unit == 'sec':
+                timeinterval_unit = timeinterval*1000
+            if unit == 'ms':
+                timeinterval_unit = timeinterval
+        else:
+            timepoints = 1
+            timeinterval_unit = 0
 
-                #position settings
-                self.pos_list.clear()
-                print(f'pos_list: {self.pos_list}')
-                if self.stage_pos_groupBox.isChecked() and self.stage_tableWidget.rowCount()>0:
-                    for row in range(self.stage_tableWidget.rowCount()):
-                        x_pos = self.stage_tableWidget.item(row, 0).text()
-                        y_pos = self.stage_tableWidget.item(row, 1).text()
-                        z_pos = self.stage_tableWidget.item(row, 2).text()
-                        self.pos_list.append((x_pos,y_pos,z_pos))
-                    print(f'pos_list: {self.pos_list}')
-                else:
-                    xp = mmcore.getXPosition()
-                    yp = mmcore.getYPosition()
-                    zp = mmcore.getPosition("Z_Stage")
-                    self.pos_list.append((xp,yp,zp))
-                    print(f'pos_list: {self.pos_list}')
-                
-                #z-stack settings
-                if self.stack_groupBox.isChecked():
-                    n_steps = self.step_spinBox.value()
-                    stepsize = self.step_size_doubleSpinBox.value()
-                else:
-                    n_steps = 1
-                    stepsize = 0
+        #position settings
+        self.pos_list.clear()
+        print(f'pos_list: {self.pos_list}')
+        if self.stage_pos_groupBox.isChecked() and self.stage_tableWidget.rowCount()>0:
+            for row in range(self.stage_tableWidget.rowCount()):
+                x_pos = self.stage_tableWidget.item(row, 0).text()
+                y_pos = self.stage_tableWidget.item(row, 1).text()
+                z_pos = self.stage_tableWidget.item(row, 2).text()
+                self.pos_list.append((x_pos,y_pos,z_pos))
+            print(f'pos_list: {self.pos_list}')
+        else:
+            xp = mmcore.getXPosition()
+            yp = mmcore.getYPosition()
+            zp = mmcore.getPosition("Z_Stage")
+            self.pos_list.append((xp,yp,zp))
+            print(f'pos_list: {self.pos_list}')
+        
+        #z-stack settings
+        if self.stack_groupBox.isChecked():
+            n_steps = self.step_spinBox.value()
+            stepsize = self.step_size_doubleSpinBox.value()
+        else:
+            n_steps = 1
+            stepsize = 0
 
-                #create timepont stack array
-                self.pos_stack_list.clear()
-                self.acq_stack_list.clear()
-                nC = self.channel_tableWidget.rowCount()
-                
-                for _ in range(len(self.pos_list)):
-                    print("self.create_stack_array(timepoints, n_steps, nC) ", timepoints, n_steps, nC)
-                    pos_stack = self.create_stack_array(timepoints, n_steps, nC) 
-                    # pos_stack = self.create_stack_array(1, n_steps, nC)
-                    print("appending a stack with shape", pos_stack.shape)
-                    self.pos_stack_list.append(pos_stack)
+        #create timepont stack array
+        self.pos_stack_list.clear()
+        self.acq_stack_list.clear()
+        nC = self.channel_tableWidget.rowCount()
+        
+        for _ in range(len(self.pos_list)):
+            pos_stack = self.create_stack_array(timepoints, n_steps, nC) 
+            self.pos_stack_list.append(pos_stack)
 
-                # print("adding to viewer empty stack with shape", pos_stack.shape)
-                # layer = pos_stack
-                # self.viewer.add_image(layer, name="MDA")
+        #create main save folder in directory
+        if self.save_groupBox.isChecked():
+            pl = format(len(self.pos_list), '04d')
+            tl = format(timepoints, '04d')
+            ns = format(n_steps, '04d')
 
-                #create main save folder in directory
-                if self.save_groupBox.isChecked():
-                    pl = format(len(self.pos_list), '04d')
-                    tl = format(timepoints, '04d')
-                    ns = format(n_steps, '04d')
+            save_folder_name = f'{self.fname_lineEdit.text()}_ps{pl}_ts{tl}_zs{ns}_{self.list_ch}'
+            save_folder = self.parent_path / save_folder_name
+            if save_folder.exists():
+                i = len(os.listdir(self.parent_path))
+                save_folder = Path(f'{save_folder_name}_{i-1}')
+                save_folder = self.parent_path / save_folder
+            os.makedirs(save_folder)
+            
+            for posxy in range(len(self.pos_list)):
+                i = format(posxy, '04d')
+                os.makedirs(save_folder/f'Pos_{i}')
 
-                    save_folder_name = f'{self.fname_lineEdit.text()}_ps{pl}_ts{tl}_zs{ns}_{self.list_ch}'
-                    save_folder = self.parent_path / save_folder_name
-                    if save_folder.exists():
-                        i = len(os.listdir(self.parent_path))
-                        save_folder = Path(f'{save_folder_name}_{i-1}')
-                        save_folder = self.parent_path / save_folder
-                    os.makedirs(save_folder)
-                    
-                    for posxy in range(len(self.pos_list)):
-                        i = format(posxy, '04d')
-                        os.makedirs(save_folder/f'Pos_{i}')
+        @thread_worker(connect={'yielded': self.update_viewer_mda})
+        def run_multi_d_acq_tpzcyx():
 
                 #start acquisition
 
@@ -325,6 +318,9 @@ class MultiDWidget(QtW.QWidget):
 
                     for position, (x, y, z) in enumerate(self.pos_list):
                         print(f"    XY_Pos_n: {position} XY_pos: {x, y} z_start: ({z})\n")
+
+                        layer_name = f'Position_{position}'
+
                         mmcore.setXYPosition(float(x), float(y))
                         mmcore.setPosition("Z_Stage",float(z))
             
@@ -347,25 +343,23 @@ class MultiDWidget(QtW.QWidget):
                                 # mmcore.waitForDevice('')
 
                                 mmcore.snapImage()
+                                #to do: create an array with timestaps 
 
                                 stack = self.pos_stack_list[position]
-                                stack[t,z_position,c,:,:] = mmcore.getImage()
-
-                                layer_name = f'Position_{position}'
-                                self.update_viewer_mda(stack, layer_name)                                                     
-
+                                image = mmcore.getImage()
+                                stack[t,z_position,c,:,:] = image #image = mmcore.getImage()
+        
+                                yield (stack, layer_name)
+                                                    
                                 end_snap = time.perf_counter()
                                 print(f'            channel snap took: {round(end_snap-start_snap, 4)} seconds')
 
                             Bottom_z = Bottom_z + stepsize 
 
-                        self.acq_stack_list.append(stack)# each is shape (1,nPositions,nChannels,x,y)
-
-
                         #save stack per position (n of file = n of timepoints)
                         #maybe use it to save temp files and remove them in the end
                         if self.save_groupBox.isChecked():
-                            print('\n_______SAVING_______')
+                            print('\n_______SAVING TEMP_______')
                             position_format = format(position, '04d')
                             position_format_1 = format(len(self.pos_list), '04d')
                             t_format = format(timepoints, '04d')
@@ -385,29 +379,6 @@ class MultiDWidget(QtW.QWidget):
                     # else:
                     #     mmcore.sleep(0.01)
 
-                # #make hyperstack
-                # t_stack = []
-                # iterator = 0
-                # for pos in range(len(self.pos_list)):
-                #     for _ in range(timepoints):
-                #         ts = self.acq_stack_list[iterator]
-                #         t_stack.append(ts)
-                #         iterator = iterator + len(self.pos_list)
-
-                #     stack_t = np.concatenate(t_stack, axis=0)
-
-                #     if self.save_groupBox.isChecked():
-                #         pos_format = format(pos, '04d')
-                #         t_format = format(timepoints, '04d')
-                #         z_position_format = format(n_steps, '04d')
-                #         save_name = f'{self.fname_lineEdit.text()}_p{pos_format}_ts{t_format}_zs{z_position_format}_{self.list_ch}'
-                #         pth = save_folder / f'Pos_{pos_format}' / f'{save_name}.tif'
-                #         io.imsave(str(pth), stack_t, imagej=True, check_contrast=False)
-
-                #     t_stack.clear()
-                #     iterator = pos + 1
-                
-
                 end_acq_timr = time.perf_counter()
         
                 summary = """
@@ -417,19 +388,16 @@ class MultiDWidget(QtW.QWidget):
                 """.format(round(end_acq_timr-start_acq_timr, 4))
                 summary = dedent(summary)
                 print(summary)
-
-            else:
-                print('Select at lest one channel.')
-        else:
-            print('Load a cfg file first.')
+        
+        run_multi_d_acq_tpzcyx()
+    
 
     
 
-        
-
-
-        
-
+    
 
 
     
+
+
+

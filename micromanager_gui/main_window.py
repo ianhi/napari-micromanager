@@ -116,14 +116,16 @@ class MainWindow(QtW.QMainWindow):
         
     def __init__(self, viewer):
         super().__init__()
-        self.viewer = viewer
-        self.worker = None
+        self.viewer = viewer#set the viewer
+        self.worker = None #for self.toggle_live()
 
-        uic.loadUi(UI_FILE, self)#load QtDesigner .ui file
+        uic.loadUi(UI_FILE, self)#load QtDesigner .ui file and 'promotions' .ui (multid and optocamp)
 
-        self.multid_tab.viewer = viewer
+        self.multid_tab.viewer = viewer#set the same viewer for the multid_tab
+        self.optocamp_tab.viewer = viewer#set the same viewer for the optocamp_tab
+
         # self.multid_tab.main_window = self
-        # self.optocamp_tab.viewer = viewer
+        
         
         self.cfg_LineEdit.setText(DEFAULT_CFG_NAME)#fill cfg line with DEFAULT_CFG_NAME ('demo.cfg')
 
@@ -297,7 +299,7 @@ class MainWindow(QtW.QMainWindow):
         self.x_lineEdit.setText(str('%.0f'%x))
         self.y_lineEdit.setText(str('%.0f'%y))
         self.z_lineEdit.setText(str('%.1f'%z))
-        print(f'\nStage moved to x:{x} y:{y} z:{z}')
+        print(f'Stage moved to x:{x} y:{y} z:{z}')
 
     def stage_x_left(self):
         xpos = mmcore.getXPosition()
