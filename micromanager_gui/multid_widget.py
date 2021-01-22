@@ -215,13 +215,14 @@ class MultiDWidget(QtW.QWidget):
 
     #create stack array
     def create_stack_array(self, tp, Zp, nC):
-        width = mmcore.getROI(mmcore.getCameraDevice())[2]
-        height = mmcore.getROI(mmcore.getCameraDevice())[3]
+        width = mmcore.getROI(mmcore.getCameraDevice())[2]#maybe they are inverted
+        height = mmcore.getROI(mmcore.getCameraDevice())[3]#maybe they are inverted
         bitd=mmcore.getProperty(mmcore.getCameraDevice(), "BitDepth")
         dt = f'uint{bitd}'
         mda_stack= np.empty((tp, Zp, nC, height, width), dtype=dt)
         return mda_stack
 
+    #update viewer
     def update_viewer_mda(self, result):
         stack, layer_name = result
         try:
@@ -229,7 +230,7 @@ class MultiDWidget(QtW.QWidget):
         except KeyError:
             self.viewer.add_image(stack, name=layer_name)
 
-
+    #multi-D acquisition
     def capture_multid(self):
             
         self.list_ch.clear()
@@ -313,6 +314,7 @@ class MultiDWidget(QtW.QWidget):
                 # print(header)
                 
                 start_acq_timr = time.perf_counter()
+
                 for t in range(timepoints):
                     print(f"\nt_point: {t}\n")
 
@@ -358,15 +360,30 @@ class MultiDWidget(QtW.QWidget):
 
                         #save stack per position (n of file = n of timepoints)
                         #maybe use it to save temp files and remove them in the end
-                        if self.save_groupBox.isChecked():
-                            print('\n_______SAVING TEMP_______')
-                            position_format = format(position, '04d')
-                            position_format_1 = format(len(self.pos_list), '04d')
+                        # if self.save_groupBox.isChecked():
+                        #     print('\n_______SAVING TEMP_______')
+                        #     position_format = format(position, '04d')
+                        #     position_format_1 = format(len(self.pos_list), '04d')
+                        #     t_format = format(timepoints, '04d')
+                        #     z_position_format = format(z_position, '04d')
+                        #     save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format_1}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
+                        #     pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
+                        #     io.imsave(str(pth), stack, imagej=True, check_contrast=False)
+
+
+                    if self.save_groupBox.isChecked():
+                        for i in range(len(self.pos_stack_list)):
+
+                            file_to_save = self.pos_stack_list[i]
+
+                            position_format = format(i, '04d')
                             t_format = format(timepoints, '04d')
-                            z_position_format = format(z_position, '04d')
-                            save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format_1}_t{t_format}_zs{z_position_format}_{self.list_ch}_TEMP'
+                            n_steps_format = format(n_steps, '04d')
+
+                            save_folder_name = f'{self.fname_lineEdit.text()}_p{position_format}_{t_format}t_{n_steps_format}z_{self.list_ch}_TEMP'
                             pth = save_folder / f'Pos_{position_format}'/f'{save_folder_name}.tif'
-                            io.imsave(str(pth), stack, imagej=True, check_contrast=False)
+                            io.imsave(str(pth), file_to_save, imagej=True, check_contrast=False)
+
 
                     if timeinterval_unit > 0 and t < timepoints - 1:
                         print(f"\nIt was t_point: {t}")

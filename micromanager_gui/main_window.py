@@ -43,7 +43,6 @@ class MainWindow(QtW.QMainWindow):
     x_lineEdit: QtW.QLineEdit
     y_lineEdit: QtW.QLineEdit
     z_lineEdit: QtW.QLineEdit
-    pos_update_Button: QtW.QPushButton
 
     stage_groupBox: QtW.QGroupBox
     XY_groupBox: QtW.QGroupBox
@@ -78,7 +77,6 @@ class MainWindow(QtW.QMainWindow):
         self.position_groupBox.setEnabled(True)
         self.XY_groupBox.setEnabled(True)
         self.Z_groupBox.setEnabled(True)
-        self.pos_update_Button.setEnabled(True)
         self.xy_step_size_SpinBox.setEnabled(True)
         self.z_step_size_doubleSpinBox.setEnabled(True)
         self.left_Button.setEnabled(True)
@@ -99,7 +97,6 @@ class MainWindow(QtW.QMainWindow):
         self.position_groupBox.setEnabled(False)
         self.XY_groupBox.setEnabled(False)
         self.Z_groupBox.setEnabled(False)
-        self.pos_update_Button.setEnabled(False)
         self.xy_step_size_SpinBox.setEnabled(False)
         self.z_step_size_doubleSpinBox.setEnabled(False)
         self.left_Button.setEnabled(False)
@@ -133,7 +130,6 @@ class MainWindow(QtW.QMainWindow):
         self.load_cgf_Button.clicked.connect(self.load_cfg)
         self.browse_cfg_Button.clicked.connect(self.browse_cfg)
 
-        self.pos_update_Button.clicked.connect(self.update_stage_position)
         self.left_Button.clicked.connect(self.stage_x_left)
         self.right_Button.clicked.connect(self.stage_x_right)
         self.y_up_Button.clicked.connect(self.stage_y_up)
