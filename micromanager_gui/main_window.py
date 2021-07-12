@@ -112,7 +112,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         self._mmc.frameReady.connect(self._on_mda_frame)
 
         # Other mmcore signals
-        self._mmc.systemConfigurationLoaded.connect(self._on_system_configuration_loaded)
+        # comment out signal to avoid: https://github.com/tlambert03/pymmcore-plus/issues/17
+        # self._mmc.systemConfigurationLoaded.connect(self._on_system_configuration_loaded)
         self._mmc.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
         self._mmc.stagePositionChanged.connect(self._on_stage_position_changed)
         self._mmc.exposureChanged.connect(lambda name, exp: self.exp_spinBox.setValue(exp))
@@ -210,6 +211,9 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.load_cfg_Button.setEnabled(False)
         print("loading", self.cfg_LineEdit.text())
         self._mmc.loadSystemConfiguration(self.cfg_LineEdit.text())
+        # call here instead of in callback to avoid
+        # https://github.com/tlambert03/pymmcore-plus/issues/17
+        self._on_system_configuration_loaded()
 
     def _refresh_camera_options(self):
         cam_device = self._mmc.getCameraDevice()
