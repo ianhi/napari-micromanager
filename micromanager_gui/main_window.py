@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 import napari
 import numpy as np
 from pymmcore_plus import RemoteMMCore
-from pymmcore_plus.qcallbacks import QCoreCallback
 from qtpy import QtWidgets as QtW
 from qtpy import uic
 from qtpy.QtCore import QSize, QTimer
@@ -95,8 +94,6 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         # create connection to mmcore server
         self._mmc = RemoteMMCore()
-        sig = QCoreCallback()
-        self._mmc.register_callback(sig)
 
         # tab widgets
         self.mda = MultiDWidget(self._mmc)
@@ -105,17 +102,20 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.tabWidget.addTab(self.explorer, "Sample Explorer")
 
         # connect mmcore signals
-        sig.MDAStarted.connect(self.mda._on_mda_started)
-        sig.MDAFinished.connect(self.mda._on_mda_finished)
-        sig.MDAFinished.connect(self._on_system_configuration_loaded)
-        sig.MDAPauseToggled.connect(
+
+        # MDA Signals
+        self._mmc.sequenceStarted.connect(self.mda._on_mda_started)
+        self._mmc.sequenceFinished.connect(self.mda._on_mda_finished)
+        self._mmc.sequencePauseToggled.connect(
             lambda p: self.mda.pause_Button.setText("GO" if p else "PAUSE")
         )
-        sig.systemConfigurationLoaded.connect(self._on_system_configuration_loaded)
-        sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
-        sig.stagePositionChanged.connect(self._on_stage_position_changed)
-        sig.MDAFrameReady.connect(self._on_mda_frame)
-        sig.exposureChanged.connect(lambda name, exp: self.exp_spinBox.setValue(exp))
+        self._mmc.frameReady.connect(self._on_mda_frame)
+
+        # Other mmcore signals
+        self._mmc.systemConfigurationLoaded.connect(self._on_system_configuration_loaded)
+        self._mmc.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
+        self._mmc.stagePositionChanged.connect(self._on_stage_position_changed)
+        self._mmc.exposureChanged.connect(lambda name, exp: self.exp_spinBox.setValue(exp))
 
         # connect explorer
         self.explorer.new_frame.connect(self.add_frame_explorer)
