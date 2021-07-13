@@ -116,7 +116,21 @@ class MainWindow(QtW.QWidget, _MainUI):
         # self._mmc.systemConfigurationLoaded.connect(self._on_system_configuration_loaded)
         self._mmc.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
         self._mmc.stagePositionChanged.connect(self._on_stage_position_changed)
-        self._mmc.exposureChanged.connect(lambda name, exp: self.exp_spinBox.setValue(exp))
+        self._mmc.exposureChanged.connect(
+            lambda name, exp: self.exp_spinBox.setValue(exp)
+        )
+        self._mmc.configGroupChanged.connect(self._config_group_changed)
+
+        # Immediately update mmcore on interaction with GUI
+        self.snap_channel_comboBox.currentTextChanged.connect(
+            lambda name: self._mmc.setConfig("Channel", name)
+        )
+        self.exp_spinBox.valueChanged.connect(lambda exp: self._mmc.setExposure(exp))
+        self.objective_comboBox.currentIndexChanged.connect(self._change_objective)
+        self.bit_comboBox.currentIndexChanged.connect(self._bit_changed)
+        self.bin_comboBox.currentIndexChanged.connect(self._bin_changed)
+        
+
 
         # connect explorer
         self.explorer.new_frame.connect(self.add_frame_explorer)
@@ -135,10 +149,6 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.snap_Button.clicked.connect(self.snap)
         self.live_Button.clicked.connect(self.toggle_live)
 
-        # connect comboBox
-        self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
-        self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
-        self.bin_comboBox.currentIndexChanged.connect(self.bin_changed)
 
     def delete_layer(self, name):
         layer_set = {str(layer) for layer in self.viewer.layers}
@@ -250,12 +260,16 @@ class MainWindow(QtW.QWidget, _MainUI):
             x, y = self._mmc.getXPosition(), self._mmc.getYPosition()
             self._on_xy_stage_position_changed(self._mmc.getXYStageDevice(), x, y)
 
-    def bit_changed(self):
+    def _config_group_changed(self, group: str, config: str):
+        if group == "Channel":
+            self.snap_channel_comboBox.setCurrentText(config)
+
+    def _bit_changed(self):
         if self.bit_comboBox.count() > 0:
             bits = self.bit_comboBox.currentText()
             self._mmc.setProperty(self._mmc.getCameraDevice(), "PixelType", bits)
 
-    def bin_changed(self):
+    def _bin_changed(self):
         if self.bin_comboBox.count() > 0:
             bins = self.bin_comboBox.currentText()
             cd = self._mmc.getCameraDevice()
@@ -287,7 +301,7 @@ class MainWindow(QtW.QWidget, _MainUI):
     def stage_z_down(self):
         self._mmc.setRelPosition(dz=-float(self.z_step_size_doubleSpinBox.value()))
 
-    def change_objective(self):
+    def _change_objective(self):
         if not self.objective_comboBox.count() > 0:
             return
 
@@ -347,15 +361,15 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def snap(self):
         self.stop_live()
-        self._mmc.setExposure(self.exp_spinBox.value())
         self._mmc.snapImage()
         self.update_viewer(self._mmc.getImage())
 
     def start_live(self):
-        self._mmc.startContinuousSequenceAcquisition(self.exp_spinBox.value())
+        exposure_time = self._mmc.getExposure()
+        self._mmc.startContinuousSequenceAcquisition(exposure_time)
         self.streaming_timer = QTimer()
         self.streaming_timer.timeout.connect(self.update_viewer)
-        self.streaming_timer.start(int(self.exp_spinBox.value()))
+        self.streaming_timer.start(int(exposure_time))
         self.live_Button.setText("Stop")
 
     def stop_live(self):
