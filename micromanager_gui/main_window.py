@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import napari
 import numpy as np
+from napari.qt.threading import thread_worker
 from pymmcore_plus import CMMCorePlus, RemoteMMCore
 from qtpy import QtWidgets as QtW
 from qtpy import uic
@@ -103,7 +104,12 @@ class _MainUI:
 
 
 class MainWindow(QtW.QWidget, _MainUI):
-    def __init__(self, viewer: napari.viewer.Viewer, remote=True):
+    def __init__(
+        self,
+        viewer: napari.viewer.Viewer,
+        remote=False,
+        mmc: CMMCorePlus | RemoteMMCore = None,
+    ):
         super().__init__()
         self.setup_ui()
 
@@ -114,7 +120,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.objectives_cfg = None
 
         # create connection to mmcore server or process-local variant
-        self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+        if mmc:
+            self._mmc = mmc
+        else:
+            self._mmc = RemoteMMCore() if remote else CMMCorePlus()
 
         # tab widgets
         self.mda = MultiDWidget(self._mmc)
@@ -586,8 +595,15 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def snap(self):
         self.stop_live()
-        self._mmc.snapImage()
-        self.update_viewer(self._mmc.getImage())
+
+        # snap in a thread so we don't freeze UI when using process local mmc
+        @thread_worker(
+            connect={"finished": lambda: self.update_viewer(self._mmc.getImage())}
+        )
+        def snap_worker():
+            self._mmc.snapImage()
+
+        snap_worker()
 
     def start_live(self):
         self._mmc.startContinuousSequenceAcquisition(self.exp_spinBox.value())
