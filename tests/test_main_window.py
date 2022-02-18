@@ -1,9 +1,11 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import pytest
+from pymmcore_plus import RemoteMMCore
 from useq import MDASequence
 
 import micromanager_gui
@@ -25,6 +27,72 @@ if not os.getenv("MICROMANAGER_PATH"):
             "installation was not found in this package.  Please run "
             "`python micromanager_gui/install_mm.py"
         )
+
+
+def test_exposure_changing(qtbot: "QtBot", main_window: MainWindow):
+    mmc = main_window._mmc
+    remote = isinstance(mmc, RemoteMMCore)
+
+    # qtbot wait was breaking at times with pysygnal signals
+    if remote:
+        waitSignals = qtbot.waitSignals
+        waitSignal = qtbot.waitSignal
+
+    else:
+
+        @contextmanager
+        def waitSignals(*args):
+            yield
+
+        @contextmanager
+        def waitSignal(*args):
+            yield
+
+    with waitSignals(
+        [
+            main_window.snap_channel_comboBox.currentTextChanged,
+            mmc.events.exposureChanged,
+        ]
+    ):
+        main_window.snap_channel_comboBox.setCurrentText("DAPI")
+
+    assert main_window.exp_spinBox.value() == 1.0
+    assert mmc.getExposure() == 1.0
+    with waitSignal(mmc.events.exposureChanged):
+        mmc.setExposure(15)
+
+    # Cy3/Cy5 has exposure defined in config group and we should respect that.
+    with waitSignals(
+        [
+            main_window.snap_channel_comboBox.currentTextChanged,
+            mmc.events.exposureChanged,
+        ]
+    ):
+        main_window.snap_channel_comboBox.setCurrentText("Cy5")
+    assert main_window.exp_spinBox.value() == 200
+    assert mmc.getExposure() == 200
+
+    # back to DAPI - make sure our 15 stuck
+    with waitSignals(
+        [
+            main_window.snap_channel_comboBox.currentTextChanged,
+            mmc.events.exposureChanged,
+        ]
+    ):
+        main_window.snap_channel_comboBox.setCurrentText("DAPI")
+    assert main_window.exp_spinBox.value() == 15
+    assert mmc.getExposure() == 15
+
+    # Now rhodamine - should go to the default value of the cache
+    with waitSignals(
+        [
+            main_window.snap_channel_comboBox.currentTextChanged,
+            mmc.events.exposureChanged,
+        ]
+    ):
+        main_window.snap_channel_comboBox.setCurrentText("Rhodamine")
+    assert main_window.exp_spinBox.value() == 1
+    assert mmc.getExposure() == 1
 
 
 def test_main_window_mda(main_window: MainWindow):

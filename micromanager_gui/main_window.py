@@ -17,6 +17,7 @@ from ._camera_roi import CameraROI
 from ._illumination import IlluminationDialog
 from ._saving import save_sequence
 from ._util import (
+    ExposureCache,
     SelectDeviceFromCombobox,
     blockSignals,
     event_indices,
@@ -122,6 +123,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         else:
             self._mmc = RemoteMMCore() if remote else CMMCorePlus()
 
+        self._exposure_cache = ExposureCache(self._mmc)
+
         # tab widgets
         self.mda = MultiDWidget(self._mmc)
         self.explorer = ExploreSample(self.viewer, self._mmc)
@@ -202,13 +205,17 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.crop_Button.setEnabled(enabled)
 
     def _update_exp(self, exposure: float):
+        # would like to block our callback firing here ideally
+        # or maybe move the streaming timer into our callback
         self._mmc.setExposure(exposure)
         if self.streaming_timer:
             self.streaming_timer.setInterval(int(exposure))
             self._mmc.stopSequenceAcquisition()
             self._mmc.startContinuousSequenceAcquisition(exposure)
+        self._exposure_cache[self.snap_channel_comboBox.currentText()] = exposure
 
-    def _on_exp_change(self, camera: str, exposure: float):
+    def _on_exp_change(self, camera: str, exposure: float = None):
+        self._exposure_cache[self.snap_channel_comboBox.currentText()] = exposure
         with blockSignals(self.exp_spinBox):
             self.exp_spinBox.setValue(exposure)
         if self.streaming_timer:
@@ -328,6 +335,11 @@ class MainWindow(QtW.QWidget, _MainUI):
                     self._mmc.getProperty(cam_device, "PixelType")
                 )
 
+        self._exposure_cache.update_cache(
+            channel=self.snap_channel_comboBox.currentText(),
+            exposure=self.exp_spinBox.value(),
+        )
+
     def _refresh_objective_options(self):
 
         obj_dev_list = self._mmc.guessObjectiveDevices()
@@ -438,6 +450,7 @@ class MainWindow(QtW.QWidget, _MainUI):
     def _set_channel_group(self, guessed_channel: str):
         channel_group = guessed_channel
         self._mmc.setChannelGroup(channel_group)
+        self._exposure_cache.channel_group = channel_group
         channel_list = self._mmc.getAvailableConfigs(channel_group)
         with blockSignals(self.snap_channel_comboBox):
             self.snap_channel_comboBox.clear()
@@ -458,6 +471,9 @@ class MainWindow(QtW.QWidget, _MainUI):
         self._refresh_objective_options()
         self._refresh_channel_list()
         self._refresh_positions()
+        self.exp_spinBox.setValue(
+            self._exposure_cache[self.snap_channel_comboBox.currentText()]
+        )
 
     def bit_changed(self):
         if self.bit_comboBox.count() > 0:
@@ -472,6 +488,12 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def _channel_changed(self, newChannel: str):
         self._mmc.setConfig(self._mmc.getChannelGroup(), newChannel)
+
+        # This may result in double exposure setting if this is also set
+        # in the config group. But ideally people don't include exposure
+        # in the config group, and even if they do it shouldn't be a big
+        # performance hit.
+        self._mmc.setExposure(self._exposure_cache[newChannel])
 
     def _on_xy_stage_position_changed(self, name, x, y):
         self.x_lineEdit.setText(f"{x:.1f}")
